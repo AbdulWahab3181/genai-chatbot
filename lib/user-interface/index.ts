@@ -27,6 +27,10 @@ export interface UserInterfaceProps {
   readonly chatbotFilesBucket: s3.Bucket;
   readonly crossEncodersEnabled: boolean;
   readonly sagemakerEmbeddingsEnabled: boolean;
+  readonly cognitoDomain: string;
+  readonly redirectSignIn: string;
+  readonly redirectSignOut: string;
+  readonly providerName: string;
 }
 
 export class UserInterface extends Construct {
@@ -180,6 +184,18 @@ export class UserInterface extends Construct {
         default_cross_encoder_model: Utils.getDefaultCrossEncoderModel(
           props.config
         ),
+        auth_federated_provider: {
+          auto_redirect: false,
+          custom: true,
+          name: props.providerName
+        }
+      },
+      oauth: {
+        domain: props.cognitoDomain,
+        scope: ['openid', 'email', 'profile', 'aws.cognito.signin.user.admin'],
+        redirectSignIn: props.redirectSignIn,
+        redirectSignOut: props.redirectSignOut,
+        responseType: 'code',
       },
     });
 

@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  Authenticator,
-  Heading,
-  ThemeProvider,
-  defaultDarkModeOverride,
-  useTheme,
+    ThemeProvider,
+    defaultDarkModeOverride, Heading,
 } from "@aws-amplify/ui-react";
 import App from "../app";
 import { Amplify, Auth } from "aws-amplify";
@@ -17,9 +14,9 @@ import "@aws-amplify/ui-react/styles.css";
 import { CHATBOT_NAME } from "../common/constants";
 
 export default function AppConfigured() {
-  const { tokens } = useTheme();
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [error, setError] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [theme, setTheme] = useState(StorageHelper.getTheme());
 
   useEffect(() => {
@@ -29,28 +26,18 @@ export default function AppConfigured() {
         const awsExports = await result.json();
         const currentConfig = Amplify.configure(awsExports) as AppConfig | null;
 
-        if (currentConfig?.config.auth_federated_provider?.auto_redirect) {
-          let authenticated = false;
-          try {
-            const user = await Auth.currentAuthenticatedUser();
-            if (user) {
-              authenticated = true;
-            }
-          } catch (e) {
-            authenticated = false;
+        try {
+          const user = await Auth.currentAuthenticatedUser();
+          if (user) {
+            setIsAuthenticated(true);
           }
+        } catch (e) {
+          setIsAuthenticated(false);
+        }
 
-          if (!authenticated) {
-            const federatedProvider =
-              currentConfig.config.auth_federated_provider;
-
-            if (!federatedProvider.custom) {
-              Auth.federatedSignIn({ provider: federatedProvider.name });
-            } else {
-              Auth.federatedSignIn({ customProvider: federatedProvider.name });
-            }
-
-            return;
+        if (currentConfig?.config.auth_federated_provider?.auto_redirect) {
+          if (!isAuthenticated) {
+            redirectToSSO();
           }
         }
 
@@ -92,73 +79,110 @@ export default function AppConfigured() {
     };
   }, [theme]);
 
+  const redirectToSSO = () => {
+    if (config) {
+      const federatedProvider = config.config.auth_federated_provider;
+      if (federatedProvider) {
+        if (!federatedProvider.custom) {
+          Auth.federatedSignIn({ provider: federatedProvider.name });
+        } else {
+          Auth.federatedSignIn({customProvider: federatedProvider.name});
+        }
+      } else {
+          console.log("auth federated provider is missing")
+      }
+    } else {
+        console.log("configurations is missing")
+    }
+  };
+
   if (!config) {
     if (error) {
       return (
-        <div
-          style={{
-            height: "100%",
-            width: "100%",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Alert header="Configuration error" type="error">
-            Error loading configuration from "
-            <a href="/aws-exports.json" style={{ fontWeight: "600" }}>
-              /aws-exports.json
-            </a>
-            "
-          </Alert>
-        </div>
+          <div
+              style={{
+                height: "100%",
+                width: "100%",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+          >
+            <Alert header="Configuration error" type="error">
+              Error loading configuration from "
+              <a href="/aws-exports.json" style={{ fontWeight: "600" }}>
+                /aws-exports.json
+              </a>
+              "
+            </Alert>
+          </div>
       );
     }
 
     return (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <StatusIndicator type="loading">Loading</StatusIndicator>
-      </div>
+        <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+        >
+          <StatusIndicator type="loading">Loading</StatusIndicator>
+        </div>
     );
   }
 
+  if (!isAuthenticated) {
+      return (
+          <div
+              style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100vh',
+              }}
+          >
+              <Heading
+                  level={3}
+                  style={{ marginBottom: '20px' }}
+              >
+                  {CHATBOT_NAME}
+              </Heading>
+              <button
+                  onClick={redirectToSSO}
+                  style={{
+                      padding: '10px 20px',
+                      fontSize: '16px',
+                      color: 'white',
+                      backgroundColor: '#0d6efd', // Bootstrap primary color
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0b5ed7'} // Darken button on hover
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0d6efd'}
+              >
+                  Sign in with Azure
+              </button>
+          </div>
+      );
+  }
+
   return (
-    <AppContext.Provider value={config}>
-      <ThemeProvider
-        theme={{
-          name: "default-theme",
-          overrides: [defaultDarkModeOverride],
-        }}
-        colorMode={theme === Mode.Dark ? "dark" : "light"}
-      >
-        <Authenticator
-          hideSignUp={true}
-          components={{
-            SignIn: {
-              Header: () => {
-                return (
-                  <Heading
-                    padding={`${tokens.space.xl} 0 0 ${tokens.space.xl}`}
-                    level={3}
-                  >
-                    {CHATBOT_NAME}
-                  </Heading>
-                );
-              },
-            },
-          }}
+      <AppContext.Provider value={config}>
+        <ThemeProvider
+            theme={{
+              name: "default-theme",
+              overrides: [defaultDarkModeOverride],
+            }}
+            colorMode={theme === Mode.Dark ? "dark" : "light"}
         >
           <App />
-        </Authenticator>
-      </ThemeProvider>
-    </AppContext.Provider>
+        </ThemeProvider>
+      </AppContext.Provider>
   );
 }

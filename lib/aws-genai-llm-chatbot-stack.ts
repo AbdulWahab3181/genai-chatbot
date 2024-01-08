@@ -155,6 +155,10 @@ export class AwsGenAILLMChatbotStack extends cdk.Stack {
         typeof ragEngines?.sageMakerRagModels?.model !== "undefined",
       sagemakerEmbeddingsEnabled:
         typeof ragEngines?.sageMakerRagModels?.model !== "undefined",
+      cognitoDomain: authentication.cognitoDomain,
+      redirectSignIn: authentication.redirectSignIn,
+      redirectSignOut: authentication.redirectSignOut,
+      providerName: authentication.providerName
     });
   }
 }

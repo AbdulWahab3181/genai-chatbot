@@ -36,6 +36,13 @@ export default defineConfig({
                 default_cross_encoder_model:
                   process.env.DEFAULT_CROSS_ENCODER_MODEL,
               },
+              oauth: {
+                  domain: process.env.COGNITO_DOMAIN,
+                  scope: ['openid', 'email', 'profile', 'aws.cognito.signin.user.admin'],
+                  redirectSignIn: process.env.REDIRECT_SIGN_IN,
+                  redirectSignOut: process.env.REDIRECT_SIGN_OUT,
+                  responseType: 'code',
+              },
             },
             null,
             2
