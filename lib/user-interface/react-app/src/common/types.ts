@@ -23,6 +23,13 @@ export interface AppConfig {
     default_embeddings_model: string;
     default_cross_encoder_model: string;
   };
+  oauth?: {
+    domain: string;
+    scope: string[];
+    redirectSignIn: string;
+    redirectSignOut: string;
+    responseType: string;
+  };
   Storage: {
     AWSS3: {
       bucket: string;
